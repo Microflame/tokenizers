@@ -93,9 +93,9 @@ void ByteLevelBpe::TokenizeSingle(std::vector<int32_t>* destination, const std::
     destination->insert(destination->end(), word_bpe.begin(), word_bpe.end());
 }
 
-std::unordered_map<int64_t, ByteLevelBpe::PriorityId> ByteLevelBpe::LoadMerges(const std::string& path)
+ByteLevelBpe::MergesMap ByteLevelBpe::LoadMerges(const std::string& path)
 {
-    std::unordered_map<int64_t, ByteLevelBpe::PriorityId> res;
+    MergesMap res;
 
     std::ifstream merges(path);
     if (!merges.is_open())

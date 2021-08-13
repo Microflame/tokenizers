@@ -1,4 +1,4 @@
-test.txt
-main
-byte-level-bpe.o
-perf.*
+build/
+util/gpt-2*
+util/merges.txt
+util/vocab.json

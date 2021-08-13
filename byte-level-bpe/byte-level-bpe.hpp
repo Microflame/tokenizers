@@ -1,9 +1,14 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include <regex>
+
+#ifdef TOKENIZERS_ABSL_ENABLED
+#include <absl/container/flat_hash_map.h>
+#else
+#include <unordered_map>
+#endif // ABSL_ENABLED
 
 namespace tokenizers
 {
@@ -26,12 +31,18 @@ public:
         int32_t mask;
     };
 
+#ifdef TOKENIZERS_ABSL_ENABLED
+    using MergesMap = absl::flat_hash_map<int64_t, PriorityId>;
+#else
+    using MergesMap = std::unordered_map<int64_t, PriorityId>;
+#endif // ABSL_ENABLED
+
     ByteLevelBpe(const std::string& merges_file_path);
 
     void Tokenize(std::vector<int32_t>* destination, const std::string& str) const;
     void TokenizeSingle(std::vector<int32_t>* destination, const std::string& word) const;
 
-    static std::unordered_map<int64_t, PriorityId> LoadMerges(const std::string& path);
+    static MergesMap LoadMerges(const std::string& path);
     static std::vector<int32_t> LoadBytesToBpeMapping(const std::string& path);
     static Specials LoadSpecials(const std::string& path);
 
@@ -50,7 +61,7 @@ public:
     PriorityId GetMerge(int32_t first, int32_t second) const;
 private:
     std::regex find_word_;
-    std::unordered_map<int64_t, PriorityId> merges_;
+    MergesMap merges_;
     std::vector<int32_t> bytes_to_bpe_;
     Specials specials_;
 };
