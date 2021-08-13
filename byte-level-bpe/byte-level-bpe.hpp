@@ -1,6 +1,9 @@
+#pragma once
+
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <regex>
 
 namespace tokenizers
 {
@@ -43,7 +46,10 @@ public:
     }
 
     static int64_t JoinIds(int32_t first, int32_t second);
+
+    PriorityId GetMerge(int32_t first, int32_t second) const;
 private:
+    std::regex find_word_;
     std::unordered_map<int64_t, PriorityId> merges_;
     std::vector<int32_t> bytes_to_bpe_;
     Specials specials_;

@@ -2,16 +2,14 @@
 
 #include <fstream>
 #include <sstream>
-#include <regex>
 #include <exception>
 #include <cstring>
-
-#include <iostream>
 
 namespace tokenizers
 {
 
 ByteLevelBpe::ByteLevelBpe(const std::string& bpe_path) :
+    find_word_("'s|'t|'re|'ve|'m|'ll|'d| ?\\p\\{L\\}+| ?\\p\\{N\\}+| ?[^\\s\\p\\{L\\}\\p\\{N\\}]+|\\s+(?!\\S)|\\s+"),
     merges_(LoadMerges(bpe_path + ".merges")),
     bytes_to_bpe_(LoadBytesToBpeMapping(bpe_path + ".bytes")),
     specials_(LoadSpecials(bpe_path + ".specials"))
@@ -22,41 +20,52 @@ ByteLevelBpe::ByteLevelBpe(const std::string& bpe_path) :
 void ByteLevelBpe::Tokenize(std::vector<int32_t>* destination, const std::string& str) const
 {
     destination->clear();
-    std::regex expr("'s|'t|'re|'ve|'m|'ll|'d| ?\\p\\{L\\}+| ?\\p\\{N\\}+| ?[^\\s\\p\\{L\\}\\p\\{N\\}]+|\\s+(?!\\S)|\\s+");
     std::smatch match;
 
     auto begin = str.cbegin();
-    while (std::regex_search(begin, str.cend(), match, expr))
+    while (std::regex_search(begin, str.cend(), match, find_word_))
     {
         TokenizeSingle(destination, match[0]);
         begin = match.suffix().first;
     }
 }
 
+ByteLevelBpe::PriorityId ByteLevelBpe::GetMerge(int32_t first, int32_t second) const
+{
+    int64_t pair = JoinIds(first, second);
+    auto it = merges_.find(pair);
+    if (it != merges_.end())
+    {
+        return it->second;
+    }
+    return {INT32_MAX, -1};
+}
+
 void ByteLevelBpe::TokenizeSingle(std::vector<int32_t>* destination, const std::string& word) const
 {
-    std::vector<int32_t> word_bpe;
+    static thread_local std::vector<int32_t> word_bpe;
+    word_bpe.clear();
     for (unsigned char c: word)
     {
         word_bpe.push_back(bytes_to_bpe_[c]);
+    }
+
+    static thread_local std::vector<PriorityId> merges;
+    merges.clear();
+    for (size_t i = 0; i < word_bpe.size() - 1; i++)
+    {
+        merges.push_back(GetMerge(word_bpe[i], word_bpe[i + 1]));
     }
 
     while (true)
     {
         ssize_t best_pair = -1;
         PriorityId best_priority_id = {INT32_MAX, -1};
-        for (size_t i = 0; i < word_bpe.size() - 1; i++)
+        for (size_t i = 0; i < merges.size(); i++)
         {
-            int64_t pair = JoinIds(word_bpe[i], word_bpe[i + 1]);
-            auto it = merges_.find(pair);
-            if (it == merges_.end())
+            if (merges[i].priority < best_priority_id.priority)
             {
-                continue;
-            }
-            PriorityId priority_id = it->second;
-            if (priority_id.priority < best_priority_id.priority)
-            {
-                best_priority_id = priority_id;
+                best_priority_id = merges[i];
                 best_pair = i;
             }
         }
@@ -66,9 +75,20 @@ void ByteLevelBpe::TokenizeSingle(std::vector<int32_t>* destination, const std::
         }
 
         word_bpe[best_pair] = best_priority_id.id;
-        memmove(&word_bpe[best_pair + 1], &word_bpe[best_pair + 2],
-                (word_bpe.size() - best_pair - 2) * sizeof(int32_t));
-        word_bpe.resize(word_bpe.size() - 1);
+        word_bpe.erase(word_bpe.begin() + best_pair + 1);
+        if (best_pair + 1 < (ssize_t)merges.size())
+        {
+            merges.erase(merges.begin() + best_pair + 1);
+            merges[best_pair] = GetMerge(word_bpe[best_pair], word_bpe[best_pair + 1]);
+        }
+        else
+        {
+            merges.erase(merges.begin() + best_pair);
+        }
+        if (best_pair > 0)
+        {
+            merges[best_pair - 1] = GetMerge(word_bpe[best_pair - 1], word_bpe[best_pair]);
+        }
     }
     destination->insert(destination->end(), word_bpe.begin(), word_bpe.end());
 }

@@ -6,7 +6,7 @@
 
 #include "byte-level-bpe.hpp"
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     if (argc != 3)
     {
@@ -40,6 +40,7 @@ int main(int argc, char* argv[])
     {
         tokenizer.Tokenize(&ids, str);
         std::copy(ids.begin(), ids.end(), std::ostream_iterator<int32_t>(std::cout, " "));
+        std::cout << '\n';
     }
 
     return 0;
