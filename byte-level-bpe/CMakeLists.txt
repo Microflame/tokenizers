@@ -3,7 +3,7 @@ project(byte-level-bpe)
 set(CMAKE_CXX_STANDARD 17)
 
 
-find_package(absl)
+find_package(absl QUIET)
 
 
 add_executable(main main.cpp)
