@@ -10,7 +10,7 @@ namespace tokenizers
 
 ByteLevelBpe::ByteLevelBpe(const std::string& bpe_path) :
     // Original: "'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"
-    find_word_("'s|'t|'re|'ve|'m|'ll|'d| ?[[:punct:]]| ?\\d+| ?[^\\s\\d[:punct:]]+"),
+    find_word_("'s|'t|'re|'ve|'m|'ll|'d| ?[[:punct:]]+| ?\\d+| ?[^\\s\\d[:punct:]]+"),
     merges_(LoadMerges(bpe_path + ".merges")),
     bytes_to_bpe_(LoadBytesToBpeMapping(bpe_path + ".bytes")),
     specials_(LoadSpecials(bpe_path + ".specials"))

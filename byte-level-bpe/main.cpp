@@ -39,7 +39,12 @@ int main(int argc, char *argv[])
     while (std::getline(*is, str))
     {
         tokenizer.Tokenize(&ids, str);
-        std::copy(ids.begin(), ids.end(), std::ostream_iterator<int32_t>(std::cout, " "));
+        const char* delim = "";
+        for (int32_t id: ids)
+        {
+            std::cout << delim << id;
+            delim = " ";
+        }
         std::cout << '\n';
     }
 
